@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STELLA ARCANA ✦ タロット × 星座占い</title>
+<meta name="description" content="タロットカードと星座を組み合わせた本格的な星占い。今日のあなただけの鑑定文をお届けします。">
+<meta property="og:title" content="STELLA ARCANA ✦ タロット × 星座占い">
+<meta property="og:description" content="タロットと星座の力で、今日のあなたへ天空のメッセージを。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Noto+Serif+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #c8a84b;
+  --gold-dim: rgba(200,168,75,0.4);
+  --gold-glow: rgba(200,168,75,0.15);
+  --text: #e8dfc8;
+  --text-muted: rgba(232,223,200,0.55);
+  --text-faint: rgba(232,223,200,0.3);
+  --bg: #050a1a;
+  --card-bg: rgba(255,255,255,0.03);
+  --card-border: rgba(200,168,75,0.18);
+  --radius: 14px;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Serif JP', serif; min-height: 100vh; overflow-x: hidden; }
+#canvas-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 15% 60%, rgba(80,30,140,0.25) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 85% 25%, rgba(20,50,120,0.2) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 50% 90%, rgba(60,10,80,0.18) 0%, transparent 70%); }
+.wrap { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 1.25rem 5rem; }
+.site-header { text-align: center; padding: 4rem 0 2.5rem; border-bottom: 1px solid var(--card-border); margin-bottom: 3rem; animation: fadeDown 1s ease both; }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.site-title { font-family: 'Cinzel Decorative', cursive; font-size: clamp(24px, 6vw, 42px); color: var(--gold); letter-spacing: 0.08em; text-shadow: 0 0 60px rgba(200,168,75,0.35); line-height: 1.3; }
+.site-tagline { margin-top: 0.6rem; font-size: 12px; color: var(--text-faint); letter-spacing: 0.25em; }
+.steps { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 2.5rem; animation: fadeIn 1s 0.3s ease both; }
+.step-dot { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-faint); transition: all 0.5s ease; flex-shrink: 0; }
+.step-dot.active { border-color: var(--gold); background: var(--gold-glow); color: var(--gold); box-shadow: 0 0 14px rgba(200,168,75,0.25); }
+.step-dot.done { border-color: var(--gold); background: rgba(200,168,75,0.22); color: var(--gold); }
+.step-line { width: 52px; height: 1px; background: var(--card-border); flex-shrink: 0; }
+
+.section-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.75rem; margin-bottom: 1.25rem; backdrop-filter: blur(10px); transition: opacity 0.5s, transform 0.5s; }
+.section-card.disabled { opacity: 0.38; pointer-events: none; transform: scale(0.99); }
+.section-title { font-family: 'Cinzel Decorative', cursive; font-size: 13px; color: var(--gold); margin-bottom: 1.2rem; letter-spacing: 0.06em; }
+.zodiac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.zodiac-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 10px; padding: 11px 6px; cursor: pointer; text-align: center; transition: all 0.3s; color: var(--text); font-family: 'Noto Serif JP', serif; }
+.zodiac-btn:hover { border-color: var(--gold-dim); background: var(--gold-glow); transform: translateY(-2px); }
+.zodiac-btn.selected { border-color: var(--gold); background: rgba(200,168,75,0.14); box-shadow: 0 0 18px rgba(200,168,75,0.18); }
+.zodiac-sym { font-size: 20px; display: block; margin-bottom: 4px; }
+.zodiac-name { font-size: 10px; color: var(--text-muted); }
+.tarot-hint { font-size: 11px; color: var(--text-faint); letter-spacing: 0.15em; text-align: center; margin-bottom: 1.2rem; }
+.tarot-deck { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.tarot-card { width: 78px; height: 130px; border-radius: 10px; border: 1px solid rgba(200,168,75,0.25); background: linear-gradient(160deg, #0d1b3e 0%, #1a0d3e 100%); cursor: default; pointer-events: none; position: relative; overflow: hidden; transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); display: flex; align-items: center; justify-content: center; }
+.tarot-card::before { content: '✦'; font-size: 26px; color: rgba(200,168,75,0.2); }
+.tarot-card::after { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(200,168,75,0.1); border-radius: 6px; }
+.card-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 4px; }
+.card-glyph { font-size: 26px; line-height: 1; }
+.card-label { font-size: 9px; color: rgba(200,168,75,0.8); text-align: center; line-height: 1.4; }
+.card-role { font-size: 8px; color: var(--text-faint); margin-top: 2px; }
+.draw-btn { display: block; margin: 0 auto; background: var(--gold-glow); border: 1px solid var(--gold-dim); border-radius: 8px; color: var(--gold); padding: 10px 28px; font-family: 'Noto Serif JP', serif; font-size: 13px; letter-spacing: 0.12em; cursor: pointer; transition: all 0.3s; }
+.draw-btn:hover:not(:disabled) { background: rgba(200,168,75,0.22); box-shadow: 0 0 22px rgba(200,168,75,0.2); }
+.draw-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.theme-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; cursor: pointer; text-align: left; transition: all 0.3s; color: var(--text); font-family: 'Noto Serif JP', serif; }
+.theme-btn:hover { border-color: var(--gold-dim); background: var(--gold-glow); }
+.theme-btn.selected { border-color: var(--gold); background: rgba(200,168,75,0.12); }
+.theme-icon { font-size: 20px; margin-bottom: 5px; display: block; }
+.theme-name { font-size: 13px; font-weight: 500; }
+.theme-desc { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.reading-btn { width: 100%; padding: 18px; border-radius: 12px; border: 1px solid var(--gold-dim); background: var(--gold-glow); color: var(--gold); font-family: 'Cinzel Decorative', cursive; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.4s; }
+.reading-btn:hover:not(:disabled) { background: rgba(200,168,75,0.2); box-shadow: 0 0 40px rgba(200,168,75,0.22); transform: translateY(-1px); }
+.reading-btn:disabled { opacity: 0.28; cursor: not-allowed; transform: none; }
+.result-area { display: none; background: rgba(200,168,75,0.03); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 2rem; margin-top: 1.5rem; animation: fadeIn 0.6s ease; }
+.result-area.visible { display: block; }
+.result-header { text-align: center; margin-bottom: 1.8rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); }
+.result-zodiac-sym { font-size: 38px; }
+.result-title { font-family: 'Cinzel Decorative', cursive; font-size: 16px; color: var(--gold); margin: 0.5rem 0 0.3rem; }
+.result-date { font-size: 11px; color: var(--text-faint); letter-spacing: 0.18em; }
+.result-cards { display: flex; gap: 10px; justify-content: center; margin-bottom: 1.8rem; flex-wrap: wrap; }
+.result-chip { background: rgba(200,168,75,0.07); border: 1px solid rgba(200,168,75,0.25); border-radius: 8px; padding: 8px 14px; text-align: center; min-width: 80px; }
+.chip-role { font-size: 9px; color: rgba(200,168,75,0.55); letter-spacing: 0.12em; margin-bottom: 3px; }
+.chip-name { font-size: 12px; }
+.result-text { font-size: 14px; line-height: 2.1; color: rgba(232,223,200,0.88); white-space: pre-wrap; }
+.divider { border: none; border-top: 1px solid var(--card-border); margin: 1.5rem 0; }
+.lucky-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.lucky-key { font-size: 10px; color: var(--text-faint); margin-bottom: 3px; }
+.lucky-val { font-size: 14px; color: var(--gold); }
+.score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.score-key { font-size: 11px; color: var(--text-faint); width: 56px; flex-shrink: 0; }
+.score-track { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, rgba(200,168,75,0.35), var(--gold)); transition: width 1.2s ease; }
+.score-num { font-size: 11px; color: rgba(200,168,75,0.55); min-width: 26px; text-align: right; }
+.share-cta { margin-top: 2rem; padding: 1.2rem; background: rgba(200,168,75,0.06); border: 1px solid rgba(200,168,75,0.2); border-radius: 10px; text-align: center; }
+.share-cta p { font-size: 12px; color: var(--text-muted); margin-bottom: 0.8rem; }
+.share-btn { display: inline-block; background: rgba(200,168,75,0.12); border: 1px solid var(--gold-dim); border-radius: 8px; color: var(--gold); padding: 8px 22px; font-family: 'Noto Serif JP', serif; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.3s; text-decoration: none; }
+.share-btn:hover { background: rgba(200,168,75,0.22); }
+footer { text-align: center; padding: 3rem 0 2rem; font-size: 11px; color: var(--text-faint); letter-spacing: 0.1em; }
+footer a { color: var(--gold-dim); text-decoration: none; }
+@media (max-width: 480px) {
+  .tarot-deck { gap: 10px; }
+  .tarot-card { width: 66px; height: 110px; }
+  .card-glyph { font-size: 22px; }
+  .theme-grid { grid-template-columns: 1fr; }
+  .zodiac-grid { grid-template-columns: repeat(4, 1fr); }
+  .lucky-row { gap: 16px; }
+}
+</style>
+</head>
+<body>
+<canvas id="canvas-stars"></canvas>
+<div class="aurora"></div>
+<div class="wrap">
+  <header class="site-header">
+    <h1 class="site-title">✦ STELLA ARCANA ✦</h1>
+    <p class="site-tagline">タロット × 星座 ∣ 天空の神託</p>
+  </header>
+  <div class="steps">
+    <div class="step-dot active" id="dot1">1</div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot2">2</div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot3">3</div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot4">4</div>
+  </div>
+
+  <section class="section-card" id="step1">
+    <h2 class="section-title">☽ あなたの星座を選ぶ</h2>
+    <div class="zodiac-grid" id="zodiacGrid"></div>
+  </section>
+  <section class="section-card disabled" id="step2">
+    <h2 class="section-title">✦ タロットカードを引く</h2>
+    <p class="tarot-hint">カードに触れ、宇宙のメッセージを受け取って</p>
+    <div class="tarot-deck" id="tarotDeck"></div>
+    <button class="draw-btn" id="drawBtn" onclick="drawCards()" disabled>✦ カードを引く</button>
+  </section>
+  <section class="section-card disabled" id="step3">
+    <h2 class="section-title">◯ 鑑定のテーマ</h2>
+    <div class="theme-grid" id="themeGrid"></div>
+  </section>
+  <section class="section-card disabled" id="step4">
+    <h2 class="section-title">☆ 天空の神託を受け取る</h2>
+    <p style="font-size:12px;color:var(--text-faint);text-align:center;margin-bottom:1rem;letter-spacing:0.1em;">選択が完了したら鑑定を開始してください</p>
+    <button class="reading-btn" id="readingBtn" onclick="startReading()" disabled>✦ 鑑定を開始する ✦</button>
+  </section>
+  <div class="result-area" id="resultArea">
+    <div id="resultContent"></div>
+  </div>
+</div>
+<footer>
+  <p>© 2025 STELLA ARCANA ∣ タロット × 星座占い</p>
+  <p style="margin-top:0.4rem"><a href="https://instagram.com/counseling_room_tomorrow" target="_blank">@counseling_room_tomorrow</a></p>
+</footer>
+
+<script>
+/* ── 鑑定文データ（12星座 × 4テーマ × 7曜日） ── */
+const READINGS = {
+  // 牡羊座
+  0: {
+    daily: [
+      "♈ 牡羊座へ\n\n過去のタロットが示すように、あなたはこれまで多くの挑戦を乗り越えてきました。その勇敢な魂が、今日という日を輝かせています。現在のカードは、あなたの内なる炎が最も強く燃える瞬間を告げています。躊躇わずに前へ進んでください。未来のカードは豊かな実りを約束しています。\n\n今日のあなたへ：「行動こそが最高の祈り。まず一歩を踏み出してみましょう。」",
+      "♈ 牡羊座へ\n\n月曜日の星々はあなたに新しい週の始まりを告げています。過去の積み重ねが今日の土台となり、力強い一歩を支えています。現在のエネルギーは高く、何を始めるにも最良のタイミング。未来への道はすでに開かれています。\n\n今日のあなたへ：「新しい週の始まりに、新しい自分を宣言してみましょう。」",
+      "♈ 牡羊座へ\n\n火の星座であるあなたに、今日は特別な熱量が宿っています。タロットの流れが示すのは、過去の学びが現在の直感と融合し、未来に向けて大きな跳躍をする準備ができているということ。誰かのために動くと、さらなる幸運が引き寄せられるでしょう。\n\n今日のあなたへ：「あなたの情熱は周りを動かす。その熱を惜しみなく分かち合って。」",
+      "♈ 牡羊座へ\n\n水曜日の宇宙はあなたに調和のメッセージを送っています。勢いだけでなく、今日は少し立ち止まって周囲を見渡す時間が、思わぬ発見をもたらします。タロットの現在位置は、内省が新しいビジョンを生むことを示しています。\n\n今日のあなたへ：「速さより深さを。今日は丁寧に生きてみましょう。」",
+      "♈ 牡羊座へ\n\n木曜日の星配置があなたの人間関係を後押ししています。過去のつながりが思わぬ形で実を結ぶ日。現在のタロットは橋渡しのエネルギーを示しており、誰かとの会話が人生を変えるかもしれません。\n\n今日のあなたへ：「出会いは偶然ではなく必然。今日の縁を大切に。」",
+      "♈ 牡羊座へ\n\n金曜日、週の疲れをリセットする特別なエネルギーが流れています。タロットの流れは、解放と喜びを示しています。今日は頑張りすぎず、好きなことに時間を使うことで、魂が充電されます。\n\n今日のあなたへ：「休むことも勇気。今日の喜びが明日の活力になります。」",
+      "♈ 牡羊座へ\n\n週末の星々があなたを祝福しています。タロットの過去・現在・未来が美しく連なり、これまでの努力が実を結ぶ周期に入っています。大切な人と過ごす時間が、あなたの魂を豊かにするでしょう。\n\n今日のあなたへ：「今この瞬間を全力で楽しむことが、最高の明日への準備です。」"
+    ],
+    love: [
+      "♈ 牡羊座へ\n\n恋愛において、あなたの情熱は誰の目にも輝いて見えます。過去のタロットは、傷ついた経験があなたをより深く愛せる人に育てたことを示しています。現在のカードは新しい出会いか、既存の関係の深化を告げています。恐れずに心を開いてみましょう。\n\n今日のあなたへ：「愛することへの勇気こそ、あなたの最大の魅力です。」",
+      "♈ 牡羊座へ\n\n月曜日の恋愛運は、思いがけない再会や連絡を示しています。過去に縁があった人からのサインかもしれません。現在のエネルギーは、素直な気持ちを伝えることを後押ししています。\n\n今日のあなたへ：「気持ちは言葉にしてこそ伝わる。勇気を出して一歩踏み出して。」",
+      "♈ 牡羊座へ\n\n今日の恋愛運は高まっています。タロットは、現在あなたの魅力が最大限に輝いていることを示しています。自然体のあなたが、誰かの心を動かすでしょう。焦らず、ありのままで。\n\n今日のあなたへ：「あなたらしさが最大の武器。飾らない笑顔で今日を過ごして。」",
+      "♈ 牡羊座へ\n\n水曜日の星は、パートナーとの対話を促しています。タロットの現在位置は、言葉を丁寧に選ぶことで関係が深まることを示しています。感謝の言葉が特に効果的な日です。\n\n今日のあなたへ：「「ありがとう」の一言が、関係を変える魔法になることがあります。」",
+      "♈ 牡羊座へ\n\n木曜日の恋愛運は、共通の夢を語り合うことで絆が強まる日。タロットは、未来を共に描くことが今の関係をさらに輝かせることを示しています。\n\n今日のあなたへ：「一緒に見る夢が、二人の関係を永遠にします。」",
+      "♈ 牡羊座へ\n\n金曜日の夜、ロマンスの予感が漂っています。タロットは、特別な時間を設けることで関係が劇的に変化することを告げています。今夜は大切な人との時間を優先してみましょう。\n\n今日のあなたへ：「特別な夜を作るのは運命ではなく、あなたの選択です。」",
+      "♈ 牡羊座へ\n\n週末の恋愛運は特に豊かです。タロットの流れは、ゆったりとした時間の中で本音を語り合うことで、関係が新しいステージへ進むことを示しています。\n\n今日のあなたへ：「急がない時間の中にこそ、本当の愛が育ちます。」"
+    ],
+    work: [
+      "♈ 牡羊座へ\n\n仕事と使命において、あなたはリーダーシップの星の下に生まれています。過去のタロットは、あなたがここまで積み上げてきた実力を示しています。現在のカードは、その力を思い切り発揮する時が来たことを告げています。周囲の目を気にせず、自分の信じる道を進んでください。\n\n今日のあなたへ：「あなたの本気が、周りを動かす波を生みます。」",
+      "♈ 牡羊座へ\n\n週の始まり、仕事運は上昇中です。タロットは新しいプロジェクトや提案が実を結ぶ時期を示しています。月曜日の今日、重要な決断は午前中に行うと吉。\n\n今日のあなたへ：「新しい週の先頭に立つのは、あなたのためにある役割です。」",
+      "♈ 牡羊座へ\n\n今日の仕事運は、創造性が鍵です。タロットは、型破りなアイデアが評価される日を示しています。上司や同僚の反応を恐れず、あなたならではの発想を提案してみましょう。\n\n今日のあなたへ：「常識を超えた発想こそ、あなたの真の才能です。」",
+      "♈ 牡羊座へ\n\n水曜日の仕事運は、チームワークに焦点が当たっています。タロットは、一人で抱え込まずに周囲と協力することで大きな成果が生まれることを示しています。\n\n今日のあなたへ：「力を合わせることで、一人では辿り着けない場所へ行けます。」",
+      "♈ 牡羊座へ\n\n木曜日は重要な交渉や会議に最適な日。タロットはあなたの説得力が増している時期を示しています。準備を整えて、自信を持って臨みましょう。\n\n今日のあなたへ：「準備した者だけが、チャンスをつかめます。」",
+      "♈ 牡羊座へ\n\n週末前の金曜日、今週の成果を確認し感謝する日です。タロットは、小さな達成も大切に祝うことで次のモチベーションが生まれることを示しています。\n\n今日のあなたへ：「今週の自分を、まず認めてあげましょう。」",
+      "♈ 牡羊座へ\n\n週末の今日、来週の仕事への英気を養う日。タロットは、しっかりと休んだ者が次の週に大きな成果をあげることを示しています。\n\n今日のあなたへ：「今日の充電が、明週の活躍を決めます。」"
+    ],
+    spirit: [
+      "♈ 牡羊座へ\n\n魂の道において、あなたは開拓者です。過去のタロットは、多くの試練を経てあなたの魂がより深く、より強くなったことを示しています。現在のカードは、その魂の成長を誰かに分かち合う時が来たことを告げています。あなたの経験は誰かの道しるべになります。\n\n今日のあなたへ：「あなたが歩んできた道そのものが、誰かへの贈り物です。」",
+      "♈ 牡羊座へ\n\n今日の魂の道は、新しい学びへの招待です。タロットは、あなたの魂が次のステージへ進む準備ができていることを示しています。気になっていた本を開く、新しい場所を訪れるなど、小さな一歩が魂を喜ばせます。\n\n今日のあなたへ：「魂は常に成長を求めています。今日の好奇心に従いましょう。」",
+      "♈ 牡羊座へ\n\n火曜日の魂の道は、自己表現がテーマです。タロットは、あなたの内なる声を外に出すことで魂が解放されることを示しています。日記を書く、誰かに話す、創作するなど、形は何でも構いません。\n\n今日のあなたへ：「表現することは、魂の深呼吸です。」",
+      "♈ 牡羊座へ\n\n水曜日の魂の道は、感謝の実践です。タロットは、今あなたの周りにある豊かさに気づくことで、さらなる豊かさを引き寄せることを示しています。\n\n今日のあなたへ：「感謝は、宇宙への最高のメッセージです。」",
+      "♈ 牡羊座へ\n\n木曜日の魂の道は、赦しがテーマです。タロットは、誰かへの、あるいは自分自身への赦しが、魂を大きく解放することを示しています。完璧でなくていい。それがあなたの魂の声です。\n\n今日のあなたへ：「赦すことは、自分自身を自由にする行為です。」",
+      "♈ 牡羊座へ\n\n金曜日の魂の道は、喜びへの回帰です。タロットは、純粋に楽しいと感じることを今日は優先することが魂の栄養になることを示しています。\n\n今日のあなたへ：「魂が喜ぶことを、今日だけは最優先にしてみましょう。」",
+      "♈ 牡羊座へ\n\n週末の魂の道は、静寂の中の対話です。タロットは、自然の中や静かな場所で自分と向き合う時間が、次の週の魂の方向性を定めることを示しています。\n\n今日のあなたへ：「静寂の中にこそ、魂の答えがあります。」"
+    ],
+    money: [
+      "♈ 牡羊座へ\n\n金運において、あなたの情熱と行動力は豊かさを引き寄せる力があります。過去のタロットは、努力が確実に実を結んでいることを示しています。現在のカードは、新しい収入の流れが開こうとしていることを告げています。豊かさを受け取る準備を、今日整えてみましょう。\n\n今日のあなたへ：「豊かさはすでにあなたの内にあります。それを信じることから始まります。」",
+      "♈ 牡羊座へ\n\n月曜日の金運は、新しい週とともに上昇しています。タロットは、今週中に予期せぬ収入や良いお知らせが届く可能性を示しています。与えることで豊かさが循環する日です。\n\n今日のあなたへ：「まず与えることで、豊かさの扉は開きます。」",
+      "♈ 牡羊座へ\n\n今日の金運は、創造性と結びついています。タロットは、あなたの才能を形にすることが収入につながる流れを示しています。好きなことを仕事にするヒントが今日見つかるかもしれません。\n\n今日のあなたへ：「あなたの才能はお金になる価値があります。」",
+      "♈ 牡羊座へ\n\n水曜日の金運は、感謝と豊かさの関係に焦点が当たっています。タロットは、今あるものへの感謝が、さらなる豊かさを引き寄せることを示しています。\n\n今日のあなたへ：「感謝の心が、豊かさを倍増させます。」",
+      "♈ 牡羊座へ\n\n木曜日は金銭的な決断に良い日です。タロットは、直感を信じて動くことで良い結果が生まれることを示しています。\n\n今日のあなたへ：「直感はあなたの最高の金融アドバイザーです。」",
+      "♈ 牡羊座へ\n\n金曜日の金運は、週末に向けてエネルギーが高まっています。タロットは、今日の小さな節約や賢い選択が長期的な豊かさに繋がることを示しています。\n\n今日のあなたへ：「今日の小さな一歩が、明日の大きな豊かさになります。」",
+      "♈ 牡羊座へ\n\n週末の金運は、ゆったりとした豊かさのエネルギーに満ちています。タロットは、お金への不安を手放し、豊かさを信頼することで新しい流れが生まれることを示しています。\n\n今日のあなたへ：「豊かさを受け取ることを、今日は許可してあげましょう。」"
+    ]
+  }
+};
+
+// 他の星座は牡羊座のデータをベースに星座名だけ変えて生成（実運用時は書き換え推奨）
+const ZODIAC_NAMES = ['牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座','天秤座','蠍座','射手座','山羊座','水瓶座','魚座'];
+const ZODIAC_SYMS  = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+const ZODIAC_CHARS = [
+  '情熱的で勇敢な','穏やかで誠実な','知的で好奇心旺盛な','感受性豊かで優しい',
+  '誇り高く寛大な','繊細で几帳面な','調和を愛する公正な','深く探求心旺盛な',
+  '自由を愛する楽観的な','忍耐強く責任感のある','独創的で人道的な','直感的で共感力の高い'
+];
+
+// 12星座分のデータを動的生成
+for(let z=1; z<12; z++){
+  const name = ZODIAC_NAMES[z];
+  const sym  = ZODIAC_SYMS[z];
+  const char = ZODIAC_CHARS[z];
+  READINGS[z] = { daily:[], love:[], work:[], spirit:[], money:[] };
+  const themes = ['daily','love','work','spirit','money'];
+  const themeLabels = ['今日の総合運','恋愛','仕事と使命','魂の道','金運・豊かさ'];
+  const themeMessages = [
+    ['新しい可能性があなたを待っています。','一歩ずつ、でも確実に前へ。','今日のあなたには特別な輝きがあります。','立ち止まることも大切な前進です。','人との縁が新しい扉を開きます。','解放と喜びのエネルギーが流れています。','今この瞬間が、最高の贈り物です。'],
+    ['心を開けば、愛は自然と訪れます。','素直な気持ちが最大の魅力です。','ありのままのあなたで十分です。','言葉よりも姿勢が愛を育てます。','共に描く未来が絆を深めます。','今夜は大切な人との時間を。','ゆっくりとした時間に愛が宿ります。'],
+    ['あなたの才能が今こそ輝く時です。','新しい挑戦があなたを成長させます。','創造性があなたの武器です。','協力し合うことで奇跡が生まれます。','準備した者にチャンスは訪れます。','今週の自分を労ってあげましょう。','充電した分だけ、次週に花開きます。'],
+    ['あなたの魂は正しい道を歩んでいます。','内なる声に耳を傾けて。','表現することで魂は解放されます。','感謝が新たな豊かさを引き寄せます。','赦しは最高の自由への扉です。','魂が喜ぶことを今日は優先して。','静寂の中に魂の答えがあります。'],
+    ['豊かさはすでにあなたの内にあります。','新しい収入の扉が開こうとしています。','与えることが豊かさを循環させます。','感謝の心が金運を高めます。','お金は愛のエネルギーと同じです。','今日の小さな節約が大きな富を育てます。','豊かさを受け取る準備を整えて。']
+  ];
+
+  themes.forEach((theme, ti) => {
+    for(let d=0; d<7; d++){
+      READINGS[z][theme].push(
+        `${sym} ${name}へ\n\n${char}${name}のあなたへ、今日の星々はメッセージを届けています。タロットの流れが示すのは、過去の経験がしっかりとあなたの土台を作り、現在という瞬間に確かな力を与えているということ。未来のカードは、あなたが正しい方向へ歩んでいることを告げています。\n\n${themeLabels[ti]}において、${themeMessages[ti][d]}\n\n今日のあなたへ：「宇宙はいつもあなたの味方です。自分を信じて今日も歩みましょう。」`
+      );
+    }
+  });
+}
+
+/* ── その他データ ── */
+const ZODIACS = [
+  { sym:'♈', name:'牡羊座' }, { sym:'♉', name:'牡牛座' }, { sym:'♊', name:'双子座' },
+  { sym:'♋', name:'蟹座'   }, { sym:'♌', name:'獅子座' }, { sym:'♍', name:'乙女座' },
+  { sym:'♎', name:'天秤座' }, { sym:'♏', name:'蠍座'   }, { sym:'♐', name:'射手座' },
+  { sym:'♑', name:'山羊座' }, { sym:'♒', name:'水瓶座' }, { sym:'♓', name:'魚座'   }
+];
+const TAROT = [
+  {glyph:'☀',name:'太陽',upright:true},{glyph:'☾',name:'月',upright:false},
+  {glyph:'⭐',name:'星',upright:true},{glyph:'⚡',name:'塔',upright:false},
+  {glyph:'⚖',name:'正義',upright:true},{glyph:'∞',name:'世界',upright:true},
+  {glyph:'♡',name:'恋人',upright:true},{glyph:'◈',name:'女魔法使い',upright:true},
+  {glyph:'⚔',name:'剣のエース',upright:true},{glyph:'✦',name:'コインの10',upright:true},
+  {glyph:'❋',name:'運命の輪',upright:false},{glyph:'▲',name:'審判',upright:true}
+];
+const THEMES = [
+  {icon:'♡',name:'恋愛・縁',desc:'出逢いと結びつき',key:'love'},
+  {icon:'✦',name:'仕事・才能',desc:'使命と成長の道',key:'work'},
+  {icon:'◯',name:'金運・豊かさ',desc:'物質とエネルギー',key:'money'},
+  {icon:'∞',name:'魂・本質',desc:'内なる声を聞く',key:'spirit'}
+];
+const LUCKY_COLORS = ['深紅','インディゴ','ゴールド','ミッドナイトブルー','アメジスト','パールホワイト','ラピスラズリ'];
+const LUCKY_DIRS   = ['北北西','南東','東','西南西','北東','真南','北'];
+const TAB_LABELS   = {daily:'今日の総合運',love:'恋愛運',work:'仕事・使命運',spirit:'魂の道',money:'金運・豊かさ'};
+
+/* ── State ── */
+let selectedZodiac = null, drawnCards = [], selectedTheme = null, currentTab = 'daily';
+
+/* ── Stars ── */
+(function(){
+  const canvas = document.getElementById('canvas-stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize(){
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    stars = Array.from({length:120}, () => ({
+      x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+      r: Math.random()*1.2+0.2, speed: Math.random()*0.3+0.05, phase: Math.random()*Math.PI*2
+    }));
+  }
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const t = Date.now()/1000;
+    stars.forEach(s => {
+      const a = 0.2 + 0.6*(0.5+0.5*Math.sin(t*s.speed+s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+
+/* ── Init ── */
+function initZodiac(){
+  const g = document.getElementById('zodiacGrid');
+  ZODIACS.forEach((z,i) => {
+    const b = document.createElement('button');
+    b.className = 'zodiac-btn';
+    b.innerHTML = `<span class="zodiac-sym">${z.sym}</span><span class="zodiac-name">${z.name}</span>`;
+    b.onclick = () => selectZodiac(i); g.appendChild(b);
+  });
+}
+function initTarot(){
+  const d = document.getElementById('tarotDeck');
+  for(let i=0;i<5;i++){
+    const c = document.createElement('div');
+    c.className='tarot-card'; c.id='tc'+i; d.appendChild(c);
+  }
+}
+function initThemes(){
+  const g = document.getElementById('themeGrid');
+  THEMES.forEach((t,i) => {
+    const b = document.createElement('button');
+    b.className='theme-btn';
+    b.innerHTML = `<span class="theme-icon">${t.icon}</span><div class="theme-name">${t.name}</div><div class="theme-desc">${t.desc}</div>`;
+    b.onclick = () => selectTheme(i,b); g.appendChild(b);
+  });
+}
+
+function enable(id){ document.getElementById(id).classList.remove('disabled'); }
+function disable(id){ document.getElementById(id).classList.add('disabled'); }
+function setDot(id,cls){ document.getElementById(id).className='step-dot '+cls; }
+
+function selectZodiac(idx){
+  selectedZodiac=idx;
+  document.querySelectorAll('.zodiac-btn').forEach((b,i)=>b.classList.toggle('selected',i===idx));
+  setDot('dot1','done'); setDot('dot2','active'); enable('step2');
+  drawnCards=[];
+  document.querySelectorAll('.tarot-card').forEach(c=>{c.classList.remove('flipped');c.innerHTML='';});
+  document.getElementById('drawBtn').disabled=false;
+  disable('step3'); disable('step4');
+  document.getElementById('resultArea').classList.remove('visible');
+}
+
+function drawCards(){
+  const shuffled = [...TAROT].sort(()=>Math.random()-0.5);
+  drawnCards = shuffled.slice(0,3);
+  const roles = ['過去','現在','未来'];
+  document.querySelectorAll('.tarot-card').forEach(c=>{c.classList.remove('flipped');c.innerHTML='';});
+  drawnCards.forEach((card,i) => {
+    setTimeout(()=>{
+      const el = document.getElementById('tc'+i);
+      el.innerHTML = `<div class="card-inner"><div class="card-glyph">${card.glyph}</div><div class="card-label">${card.name}<br>${card.upright?'正位置':'逆位置'}</div><div class="card-role">${roles[i]}</div></div>`;
+      el.classList.add('flipped');
+    }, i*350);
+  });
+  document.getElementById('drawBtn').disabled=true;
+  setTimeout(()=>{ setDot('dot2','done'); setDot('dot3','active'); enable('step3'); }, 1400);
+}
+
+function selectTheme(idx,btn){
+  selectedTheme=idx;
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  setDot('dot3','done'); setDot('dot4','active'); enable('step4');
+  document.getElementById('readingBtn').disabled=false;
+}
+
+function startReading(){
+  const z     = ZODIACS[selectedZodiac];
+  const theme = THEMES[selectedTheme];
+  const roles = ['過去','現在','未来'];
+  const today = new Date();
+  const dow   = today.getDay(); // 0=日,1=月,...,6=土
+  const dateStr = today.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+  // 鑑定文取得（曜日インデックスで選択）
+  const themeKey = theme.key;
+  const text = READINGS[selectedZodiac][themeKey][dow];
+
+  const scores = {
+    '総合運': 60+Math.floor(Math.random()*35),
+    '恋愛':   55+Math.floor(Math.random()*40),
+    '仕事':   50+Math.floor(Math.random()*45),
+    '金運':   45+Math.floor(Math.random()*50)
+  };
+  const lColor = LUCKY_COLORS[Math.floor(Math.random()*LUCKY_COLORS.length)];
+  const lNum   = Math.floor(Math.random()*9)+1;
+  const lDir   = LUCKY_DIRS[Math.floor(Math.random()*LUCKY_DIRS.length)];
+
+  document.getElementById('resultArea').classList.add('visible');
+  document.getElementById('resultContent').innerHTML = `
+    <div class="result-header">
+      <div class="result-zodiac-sym">${z.sym}</div>
+      <div class="result-title">${z.name} ∣ ${TAB_LABELS[currentTab]}</div>
+      <div class="result-date">${dateStr}</div>
+    </div>
+    <div class="result-cards">
+      ${drawnCards.map((c,i)=>`<div class="result-chip"><div class="chip-role">${roles[i]}</div><div class="chip-name">${c.glyph} ${c.name}</div></div>`).join('')}
+    </div>
+    <div class="result-text">${text}</div>
+    <hr class="divider">
+    <div class="lucky-row">
+      <div><div class="lucky-key">ラッキーカラー</div><div class="lucky-val">${lColor}</div></div>
+      <div><div class="lucky-key">ラッキーナンバー</div><div class="lucky-val">${lNum}</div></div>
+      <div><div class="lucky-key">吉方位</div><div class="lucky-val">${lDir}</div></div>
+    </div>
+    <hr class="divider">
+    ${Object.entries(scores).map(([k,v])=>`
+      <div class="score-row">
+        <div class="score-key">${k}</div>
+        <div class="score-track"><div class="score-fill" style="width:0%" data-w="${v}%"></div></div>
+        <div class="score-num">${v}</div>
+      </div>`).join('')}
+    <div class="share-cta">
+      <p>今日の鑑定結果をInstagramで保存しよう</p>
+      <a class="share-btn" href="https://instagram.com/counseling_room_tomorrow" target="_blank" rel="noopener">✦ @counseling_room_tomorrow をフォロー</a>
+    </div>
+  `;
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>{ document.querySelectorAll('.score-fill').forEach(el=>{ el.style.width=el.dataset.w; }); }, 100);
+}
+
+initZodiac(); initTarot(); initThemes();
+</script>
+</body>
+</html>
